@@ -10,7 +10,7 @@ from pymongo import AsyncMongoClient
 MONGODB_URI = os.getenv("MONGODB_URI_ALPHA")
 DB_NAME     = os.getenv("MONGODB_DB", "english_dictionary")
 
-# ── Lifespan ──────────────────────────────────────────────
+# ── Lifespan ────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.mongodb_client = AsyncMongoClient(MONGODB_URI)
