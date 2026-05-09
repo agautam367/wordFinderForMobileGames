@@ -1,0 +1,7 @@
+# Your .gitignore must have:
+.env
+.env.local
+.env.production
+__pycache__/
+*.pyc
+.DS_Store
