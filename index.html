@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Word Finder 🎮</title>
+  <style>
+    :root {
+      --pink: #ff8fc7; --pink-dark: #e25aa4; --lavender: #d8b4ff;
+      --cream: #fff8fc; --text: #4a2b43; --brown: #7a4b5d;
+      --shadow: #a85c87; --grass: #b8f2c8; --grass-dark: #4caf78;
+      --white: #ffffff; --err: #ff6b6b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Press Start 2P", monospace;
+      background:
+        radial-gradient(ellipse at 20% 10%, #ffd4f0 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 90%, #e8d4ff 0%, transparent 50%),
+        linear-gradient(135deg, #ffe0f4 0%, #f8eaff 50%, #e8f5ff 100%);
+      min-height: 100vh;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+      animation: floatIn 0.6s ease both;
+    }
+    .header h1 {
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      color: var(--pink-dark);
+      text-shadow: 3px 3px 0 #ffd4ec, 6px 6px 0 rgba(168,92,135,0.2);
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+    .header p {
+      font-size: 0.7rem;
+      color: var(--brown);
+      line-height: 2;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--cream);
+      border: 4px solid var(--brown);
+      box-shadow: 8px 8px 0 var(--shadow);
+      padding: 28px;
+      width: 100%;
+      max-width: 560px;
+      animation: floatIn 0.6s ease 0.1s both;
+    }
+
+    /* ── Letter tiles input ── */
+    .tiles-label {
+      font-size: 0.7rem;
+      color: var(--pink-dark);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .tiles-container {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 56px;
+      padding: 10px;
+      border: 3px solid var(--brown);
+      background: #fff0f8;
+      margin-bottom: 8px;
+      cursor: text;
+      position: relative;
+    }
+    .tiles-container:focus-within {
+      border-color: var(--pink-dark);
+      box-shadow: 0 0 0 3px rgba(226,90,164,0.15);
+    }
+
+    .tile {
+      width: 40px; height: 40px;
+      background: var(--pink);
+      border: 3px solid var(--pink-dark);
+      box-shadow: 3px 3px 0 var(--shadow);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; color: white; font-weight: bold;
+      text-transform: uppercase;
+      animation: tileIn 0.15s ease both;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .tile:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--shadow); }
+    .tile.removing { animation: tileOut 0.15s ease forwards; }
+
+    /* Hidden real input */
+    #letterInput {
+      position: absolute; opacity: 0; width: 1px; height: 1px;
+      pointer-events: none;
+    }
+
+    .input-hint { font-size: 0.6rem; color: var(--brown); margin-bottom: 20px; }
+
+    /* ── Length controls ── */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .control-group label {
+      font-size: 0.65rem;
+      color: var(--pink-dark);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .control-group input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 3px solid var(--brown);
+      background: #fff8fc;
+      font-family: "Press Start 2P", monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .control-group input[type="number"]:focus {
+      border-color: var(--pink-dark);
+    }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      font-family: "Press Start 2P", monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      border: 3px solid var(--brown);
+      box-shadow: 5px 5px 0 var(--shadow);
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+      min-width: 120px;
+    }
+    .btn:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--shadow); }
+    .btn:active { transform: translate(2px,2px); box-shadow: 3px 3px 0 var(--shadow); }
+    .btn-primary { background: var(--pink); color: white; }
+    .btn-clear   { background: var(--cream); color: var(--text); }
+
+    /* ── Error ── */
+    .error-box {
+      display: none;
+      padding: 12px 16px;
+      background: #fff0f0;
+      border: 3px solid var(--err);
+      box-shadow: 4px 4px 0 #d44;
+      font-size: 0.7rem;
+      margin-top: 16px;
+      color: #c00;
+    }
+
+    /* ── Results ── */
+    .results-card {
+      width: 100%;
+      max-width: 560px;
+      margin-top: 20px;
+      display: none;
+      animation: floatIn 0.4s ease both;
+    }
+
+    .results-header {
+      background: var(--lavender);
+      border: 4px solid var(--brown);
+      border-bottom: none;
+      box-shadow: 8px 0 0 var(--shadow), -0px 0 0 var(--shadow);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .results-header h2 { font-size: 0.85rem; color: var(--text); }
+    .results-count {
+      font-size: 0.7rem;
+      background: var(--pink);
+      color: white;
+      padding: 6px 12px;
+      border: 2px solid var(--brown);
+    }
+
+    /* Length filter tabs */
+    .length-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      background: #fff0fb;
+      border-left: 4px solid var(--brown);
+      border-right: 4px solid var(--brown);
+      box-shadow: 8px 0 0 var(--shadow), -0px 0 0 var(--shadow);
+    }
+    .len-tab {
+      padding: 6px 12px;
+      font-family: "Press Start 2P", monospace;
+      font-size: 0.65rem;
+      border: 2px solid var(--brown);
+      background: var(--cream);
+      cursor: pointer;
+      transition: all 0.12s;
+      color: var(--text);
+    }
+    .len-tab:hover, .len-tab.active {
+      background: var(--pink-dark); color: white;
+      transform: translate(-1px,-1px);
+      box-shadow: 3px 3px 0 var(--shadow);
+    }
+
+    /* Word grid */
+    .words-grid {
+      border: 4px solid var(--brown);
+      box-shadow: 8px 8px 0 var(--shadow);
+      background: var(--cream);
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .words-grid::-webkit-scrollbar { width: 8px; }
+    .words-grid::-webkit-scrollbar-track { background: #ffe0f4; }
+    .words-grid::-webkit-scrollbar-thumb { background: var(--pink); border: 2px solid var(--brown); }
+
+    .word-chip {
+      padding: 8px 14px;
+      background: var(--grass);
+      border: 2px solid var(--brown);
+      box-shadow: 3px 3px 0 var(--grass-dark);
+      font-size: 0.75rem;
+      font-family: "DM Sans", sans-serif;
+      font-weight: 600;
+      color: #1a4a2e;
+      text-transform: lowercase;
+      cursor: default;
+      animation: chipIn 0.2s ease both;
+      transition: transform 0.1s;
+    }
+    .word-chip:hover {
+      transform: translate(-1px,-1px);
+      box-shadow: 4px 4px 0 var(--grass-dark);
+    }
+
+    .empty-state {
+      width: 100%;
+      text-align: center;
+      padding: 30px;
+      font-size: 0.75rem;
+      color: var(--brown);
+      line-height: 2.5;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      font-size: 0.7rem;
+      color: var(--pink-dark);
+    }
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--pink-dark);
+      animation: blink 0.6s infinite;
+      margin-left: 8px;
+    }
+
+    /* ── Animations ── */
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes tileIn {
+      from { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+      to   { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    @keyframes tileOut {
+      to { opacity: 0; transform: scale(0.3); width: 0; padding: 0; margin: 0; border: none; }
+    }
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .controls { grid-template-columns: 1fr; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🎮 Word Finder</h1>
+    <p>Enter your letters and find every valid word<br>you can make from them.</p>
+  </div>
+
+  <div class="card">
+    <span class="tiles-label">Your Letters</span>
+
+    <!-- Visual tile display -->
+    <div class="tiles-container" id="tilesContainer" onclick="focusInput()">
+      <input id="letterInput" type="text" maxlength="20" autocomplete="off" spellcheck="false"/>
+    </div>
+    <p class="input-hint">Click above and type letters · Click a tile to remove it</p>
+
+    <!-- Length controls -->
+    <div class="controls">
+      <div class="control-group">
+        <label for="exactLength">Exact Length</label>
+        <input type="number" id="exactLength" min="1" max="20" placeholder="e.g. 4"/>
+      </div>
+      <div class="control-group">
+        <label for="minLength">Min Length</label>
+        <input type="number" id="minLength" min="1" max="20" placeholder="e.g. 3"/>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="search()">Find Words →</button>
+      <button class="btn btn-clear"   onclick="clearAll()">Clear ✕</button>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">Searching dictionary</div>
+
+  <!-- Results -->
+  <div class="results-card" id="resultsCard">
+    <div class="results-header">
+      <h2 id="resultsTitle">Results</h2>
+      <span class="results-count" id="resultsCount">0 words</span>
+    </div>
+
+    <div class="length-tabs" id="lengthTabs"></div>
+
+    <div class="words-grid" id="wordsGrid"></div>
+  </div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  // Change this to your Railway URL when deployed
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '';   // same origin when deployed
+
+  // ── State ───────────────────────────────────────────────
+  let letters = [];
+  let allWords = [];
+  let activeLength = 'all';
+
+  // ── Tile input ──────────────────────────────────────────
+  const input        = document.getElementById('letterInput');
+  const tilesContainer = document.getElementById('tilesContainer');
+
+  function focusInput() { input.focus(); }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && letters.length > 0 && input.value === '') {
+      removeTile(letters.length - 1);
+      e.preventDefault();
+    }
+    if (e.key === 'Enter') search();
+  });
+
+  input.addEventListener('input', () => {
+    const val = input.value.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    if (val && letters.length < 20) {
+      val.split('').forEach(c => {
+        if (letters.length < 20) addTile(c);
+      });
+    }
+    input.value = '';
+  });
+
+  function addTile(letter) {
+    letters.push(letter);
+    renderTiles();
+  }
+
+  function removeTile(index) {
+    const tile = tilesContainer.querySelectorAll('.tile')[index];
+    if (tile) {
+      tile.classList.add('removing');
+      setTimeout(() => {
+        letters.splice(index, 1);
+        renderTiles();
+      }, 140);
+    }
+  }
+
+  function renderTiles() {
+    const existing = tilesContainer.querySelectorAll('.tile');
+    existing.forEach(t => t.remove());
+    letters.forEach((letter, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.textContent = letter.toUpperCase();
+      tile.onclick = (e) => { e.stopPropagation(); removeTile(i); };
+      tilesContainer.insertBefore(tile, input);
+    });
+  }
+
+  // ── Search ──────────────────────────────────────────────
+  async function search() {
+    const errorBox = document.getElementById('errorBox');
+    errorBox.style.display = 'none';
+
+    if (letters.length === 0) {
+      showError('Please enter some letters first! 🔤');
+      return;
+    }
+
+    const exact = document.getElementById('exactLength').value;
+    const minLen = document.getElementById('minLength').value;
+
+    const body = {
+      letters: letters.join(''),
+      ...(exact  ? { length: parseInt(exact) }      : {}),
+      ...(minLen ? { min_length: parseInt(minLen) }  : {}),
+    };
+
+    // Show loading
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('resultsCard').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/words`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Something went wrong');
+      }
+
+      const data = await res.json();
+      allWords = data.words;
+      activeLength = 'all';
+      renderResults(data);
+
+    } catch (err) {
+      showError(err.message || 'Could not connect to server');
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+
+  // ── Render results ───────────────────────────────────────
+  function renderResults(data) {
+    const card   = document.getElementById('resultsCard');
+    const title  = document.getElementById('resultsTitle');
+    const count  = document.getElementById('resultsCount');
+    const tabs   = document.getElementById('lengthTabs');
+    const grid   = document.getElementById('wordsGrid');
+
+    title.textContent = `Words from "${data.letters.toUpperCase()}"`;
+    count.textContent = `${data.total} word${data.total !== 1 ? 's' : ''}`;
+
+    // Build length tabs
+    const lengths = [...new Set(allWords.map(w => w.length))].sort((a,b) => a-b);
+    tabs.innerHTML = '';
+
+    const allTab = document.createElement('button');
+    allTab.className = 'len-tab active';
+    allTab.textContent = `All (${allWords.length})`;
+    allTab.onclick = () => filterByLength('all', allTab);
+    tabs.appendChild(allTab);
+
+    lengths.forEach(len => {
+      const wordsOfLen = allWords.filter(w => w.length === len);
+      const tab = document.createElement('button');
+      tab.className = 'len-tab';
+      tab.textContent = `${len} letters (${wordsOfLen.length})`;
+      tab.onclick = () => filterByLength(len, tab);
+      tabs.appendChild(tab);
+    });
+
+    renderGrid(allWords);
+    card.style.display = 'block';
+  }
+
+  function filterByLength(len, clickedTab) {
+    activeLength = len;
+    document.querySelectorAll('.len-tab').forEach(t => t.classList.remove('active'));
+    clickedTab.classList.add('active');
+    const filtered = len === 'all' ? allWords : allWords.filter(w => w.length === len);
+    renderGrid(filtered);
+  }
+
+  function renderGrid(words) {
+    const grid = document.getElementById('wordsGrid');
+    grid.innerHTML = '';
+
+    if (words.length === 0) {
+      grid.innerHTML = '<div class="empty-state">😔 No words found<br>Try different letters or length!</div>';
+      return;
+    }
+
+    words.forEach((word, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'word-chip';
+      chip.textContent = word;
+      chip.style.animationDelay = `${Math.min(i * 20, 300)}ms`;
+      grid.appendChild(chip);
+    });
+  }
+
+  // ── Helpers ─────────────────────────────────────────────
+  function clearAll() {
+    letters = [];
+    renderTiles();
+    document.getElementById('exactLength').value = '';
+    document.getElementById('minLength').value   = '';
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('resultsCard').style.display = 'none';
+    allWords = [];
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = '⚠ ' + msg;
+    box.style.display = 'block';
+  }
+</script>
+</body>
+</html>
